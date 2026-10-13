@@ -113,6 +113,13 @@ func (c *commentsScreen) Update(msg tea.Msg) (Screen, tea.Cmd) {
 		c.err = msg.err
 		if msg.err == nil && msg.story != nil {
 			c.tree = domain.BuildTree(msg.story.Comments)
+			// Start with replies hidden; only top-level comments show.
+			c.collapsed = map[string]bool{}
+			for _, root := range c.tree.Roots {
+				if root.HasChildren() {
+					c.collapsed[root.Comment.ShortID] = true
+				}
+			}
 			c.rebuild()
 		}
 		return c, nil

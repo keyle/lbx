@@ -172,3 +172,26 @@ func indexOf(c *commentsScreen, n *domain.Node) int {
 	}
 	return 0
 }
+
+func TestCommentsLoadCollapsed(t *testing.T) {
+	data, err := os.ReadFile("../lobsters/testdata/story.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var story lobsters.StoryWithComments
+	if err := json.Unmarshal(data, &story); err != nil {
+		t.Fatal(err)
+	}
+	c := newCommentsScreen(nil, story.Story, time.Time{})
+	c.width, c.height = 80, 24
+	c.Update(storyLoadedMsg{id: story.ShortID, story: &story})
+	if len(c.visible) != len(c.tree.Roots) {
+		t.Errorf("visible = %d, want only %d top-level comments", len(c.visible), len(c.tree.Roots))
+	}
+	if root := firstRootWithChildren(c); root != nil {
+		c.setCollapsed(root, false)
+		if len(c.visible) <= len(c.tree.Roots) {
+			t.Error("expanding a root should reveal replies")
+		}
+	}
+}
