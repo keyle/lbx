@@ -123,7 +123,7 @@ variables take precedence on every platform, including macOS.
 - `theme.toml` — ANSI 256-color numbers per element; empty values fall back to
   the terminal's default.
 - `favorites.toml` — saved stories.
-- `history.json` — per-story last-visit time and observed comment count.
+- `history.json` — per-story last-visit time and observed comment count (newest 1,000 stories kept).
 
 ## Notes and limitations
 

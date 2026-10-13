@@ -6,8 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
+
+// MaxEntries is how many stories are remembered. Beyond this, the entries with
+// the oldest last visit are dropped.
+const MaxEntries = 1000
 
 // Entry records a story's last visit and the comment count seen at that time.
 type Entry struct {
@@ -40,7 +45,30 @@ func Load(path string) (*Store, error) {
 	if s.entries == nil {
 		s.entries = map[string]Entry{}
 	}
+	s.trim()
 	return s, nil
+}
+
+// trim drops the least recently visited entries beyond MaxEntries.
+func (s *Store) trim() {
+	excess := len(s.entries) - MaxEntries
+	if excess <= 0 {
+		return
+	}
+	ids := make([]string, 0, len(s.entries))
+	for id := range s.entries {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		a, b := s.entries[ids[i]], s.entries[ids[j]]
+		if !a.LastVisit.Equal(b.LastVisit) {
+			return a.LastVisit.Before(b.LastVisit)
+		}
+		return ids[i] < ids[j]
+	})
+	for _, id := range ids[:excess] {
+		delete(s.entries, id)
+	}
 }
 
 // IsRead reports whether a story has a recorded visit.
@@ -58,6 +86,7 @@ func (s *Store) Entry(id string) (Entry, bool) {
 // Mark records a visit with the observed comment count and persists.
 func (s *Store) Mark(id string, commentCount int, at time.Time) error {
 	s.entries[id] = Entry{LastVisit: at, CommentCount: commentCount}
+	s.trim()
 	return s.save()
 }
 
@@ -68,6 +97,7 @@ func (s *Store) Toggle(id string, commentCount int, at time.Time) (bool, error) 
 		return false, s.save()
 	}
 	s.entries[id] = Entry{LastVisit: at, CommentCount: commentCount}
+	s.trim()
 	return true, s.save()
 }
 

@@ -29,12 +29,6 @@ type inputCapturer interface{ CapturingInput() bool }
 // wideMin is the column count at which dual-pane mode becomes available.
 const wideMin = 180
 
-// previewTickMsg debounces the wide-view comment preview.
-type previewTickMsg struct {
-	seq int
-	id  string
-}
-
 // Options configures the root model.
 type Options struct {
 	Client     *lobsters.Client
@@ -63,10 +57,6 @@ type Model struct {
 	wideMode string
 	wide     bool
 	wideSet  bool
-
-	preview   *commentsScreen
-	previewID string
-	previewQ  int
 }
 
 // New builds the root model with a list screen at the bottom of the stack.
@@ -93,42 +83,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.updateWide()
-		if cmd := m.maybePreview(); cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-		return m, tea.Batch(cmds...)
+		return m, nil
 	case spinner.TickMsg:
-		// Every spinner in the stack and the preview pane gets ticks, so they keep animating
+		// Every spinner in the stack gets ticks, so they keep animating
 		// even when they are not the top screen. Each one ignores ticks that are not its own.
 		for i, s := range m.stack {
 			next, cmd := s.Update(msg)
 			m.stack[i] = next
 			cmds = append(cmds, cmd)
 		}
-		if m.preview != nil {
-			next, cmd := m.preview.Update(msg)
-			if cs, ok := next.(*commentsScreen); ok {
-				m.preview = cs
-			}
-			cmds = append(cmds, cmd)
-		}
 		return m, tea.Batch(cmds...)
 	case categoryChangedMsg:
 		m.activeCat = msg.index
 		return m, nil
-	case previewTickMsg:
-		if msg.seq == m.previewQ && m.width >= wideMin && m.wide && len(m.stack) == 1 {
-			if cmd := m.startPreview(msg.id); cmd != nil {
-				cmds = append(cmds, cmd)
-			}
-		}
-		return m, tea.Batch(cmds...)
 	case popMsg:
 		if len(m.stack) > 1 {
 			m.stack = m.stack[:len(m.stack)-1]
 		}
-		m.preview = nil
-		m.previewID = ""
 		return m, nil
 	case quitMsg:
 		return m, tea.Quit
@@ -141,11 +112,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			_ = m.hist.Mark(msg.story.ShortID, msg.story.CommentCount, time.Now())
 		}
 		m.stack = append(m.stack, newCommentsScreen(m.client, msg.story, since))
-		m.preview = nil
 		return m, m.stack[len(m.stack)-1].Init()
 	case openReaderMsg:
 		m.stack = append(m.stack, newReaderScreen(msg.story))
-		m.preview = nil
 		return m, m.stack[len(m.stack)-1].Init()
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
@@ -159,10 +128,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "wide":
 				m.wideSet = true
 				m.wide = !m.wide
-				if cmd := m.maybePreview(); cmd != nil {
-					cmds = append(cmds, cmd)
-				}
-				return m, tea.Batch(cmds...)
+				return m, nil
 			}
 		}
 		if m.showHelp {
@@ -176,25 +142,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if len(m.stack) == 0 {
 		return m, nil
 	}
-	if m.preview != nil {
-		if _, ok := msg.(storyLoadedMsg); ok {
-			next, pcmd := m.preview.Update(msg)
-			if cs, ok := next.(*commentsScreen); ok {
-				m.preview = cs
-			}
-			cmds = append(cmds, pcmd)
-		}
-	}
 	top := m.stack[len(m.stack)-1]
 	next, cmd := top.Update(msg)
 	m.stack[len(m.stack)-1] = next
 	cmds = append(cmds, cmd)
-
-	if _, ok := msg.(tea.KeyMsg); ok {
-		if previewCmd := m.maybePreview(); previewCmd != nil {
-			cmds = append(cmds, previewCmd)
-		}
-	}
 	return m, tea.Batch(cmds...)
 }
 
@@ -220,45 +171,6 @@ func (m *Model) updateWide() {
 	if m.width < wideMin {
 		m.wide = false
 	}
-}
-
-// maybePreview schedules a debounced comment preview for the highlighted story
-// when the terminal is wide and only the list is shown.
-func (m *Model) maybePreview() tea.Cmd {
-	if !m.wide || m.width < wideMin || len(m.stack) != 1 {
-		return nil
-	}
-	list, ok := m.stack[0].(*listScreen)
-	if !ok {
-		return nil
-	}
-	story, ok := list.selected()
-	if !ok {
-		return nil
-	}
-	if story.ShortID == m.previewID && m.preview != nil {
-		return nil
-	}
-	m.previewQ++
-	seq := m.previewQ
-	id := story.ShortID
-	return tea.Tick(120*time.Millisecond, func(time.Time) tea.Msg {
-		return previewTickMsg{seq: seq, id: id}
-	})
-}
-
-func (m *Model) startPreview(id string) tea.Cmd {
-	list, ok := m.stack[0].(*listScreen)
-	if !ok {
-		return nil
-	}
-	story, ok := list.selected()
-	if !ok || story.ShortID != id {
-		return nil
-	}
-	m.preview = newCommentsScreen(m.client, story, time.Time{})
-	m.previewID = id
-	return m.preview.Init()
 }
 
 func (m Model) View() string {
@@ -305,9 +217,6 @@ func (m Model) wideBody(top Screen, height int) string {
 func (m Model) rightPane(top Screen, width, height int) string {
 	if len(m.stack) > 1 {
 		return top.View(width, height)
-	}
-	if m.preview != nil {
-		return m.preview.View(width, height)
 	}
 	return lipgloss.NewStyle().Faint(true).Render("select a story, then press Enter to read its comments")
 }

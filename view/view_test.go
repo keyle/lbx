@@ -108,3 +108,20 @@ func TestHelpToggle(t *testing.T) {
 		t.Error("esc did not close help")
 	}
 }
+
+func TestWideNavigationDoesNotFetch(t *testing.T) {
+	m := New(Options{Client: lobsters.New()})
+	got, _ := m.Update(sizeMsg(200, 40))
+	m = got.(Model)
+	l := m.stack[0].(*listScreen)
+	l.stories = []lobsters.Story{{ShortID: "a"}, {ShortID: "b"}}
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if cmd != nil {
+		if msg := cmd(); msg != nil {
+			t.Fatalf("moving the cursor produced %T; expected no work", msg)
+		}
+	}
+	if len(m.stack) != 1 {
+		t.Fatal("j must not open comments")
+	}
+}
