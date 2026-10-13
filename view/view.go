@@ -196,16 +196,33 @@ func (m Model) View() string {
 		return head + "\n\n" + lipgloss.Place(m.width, bodyHeight, lipgloss.Center, lipgloss.Center, box)
 	}
 
-	inner := m.width - contentPad
 	if m.wide && m.width >= wideMin {
-		return head + "\n\n" + indent(m.wideBody(top, inner, bodyHeight), contentPad)
+		return head + "\n\n" + m.wideBody(top, m.width, bodyHeight)
 	}
-	return head + "\n\n" + indent(top.View(inner, bodyHeight), contentPad)
+	pad := padFor(top)
+	return head + "\n\n" + indent(top.View(m.width-pad, bodyHeight), pad)
 }
 
-// contentPad is the left padding applied to all body content, so list titles
-// line up with the app name in the header.
-const contentPad = 2
+// Left padding per screen kind.
+const (
+	listPad     = 1
+	commentsPad = 3
+	contentsPad = 3
+	defaultPad  = 2
+)
+
+// padFor returns the left padding for a screen.
+func padFor(s Screen) int {
+	switch s.(type) {
+	case *listScreen:
+		return listPad
+	case *commentsScreen:
+		return commentsPad
+	case *readerScreen:
+		return contentsPad
+	}
+	return defaultPad
+}
 
 // indent prefixes every line of s with n spaces.
 func indent(s string, n int) string {
@@ -222,18 +239,19 @@ func (m Model) wideBody(top Screen, width, height int) string {
 	if listW < 40 {
 		listW = 40
 	}
-	rightW := width - listW - 1
+	rightW := width - listW
 	if rightW < 20 {
 		rightW = 20
 	}
-	left := m.stack[0].View(listW, height)
+	left := indent(m.stack[0].View(listW-listPad, height), listPad)
 	right := m.rightPane(top, rightW, height)
-	return lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right)
+	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }
 
 func (m Model) rightPane(top Screen, width, height int) string {
 	if len(m.stack) > 1 {
-		return top.View(width, height)
+		pad := padFor(top)
+		return indent(top.View(width-pad, height), pad)
 	}
-	return lipgloss.NewStyle().Faint(true).Render("select a story, then press Enter to read its comments")
+	return indent(lipgloss.NewStyle().Faint(true).Render("select a story, then press Enter to read its comments"), commentsPad)
 }
