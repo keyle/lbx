@@ -160,14 +160,17 @@ func (l *listScreen) handleKey(msg tea.KeyMsg) (Screen, tea.Cmd) {
 		}
 	case "reader":
 		if s, ok := l.selected(); ok {
+			l.markRead(s)
 			return l, func() tea.Msg { return openReaderMsg{story: s} }
 		}
 	case "openStory":
 		if s, ok := l.selected(); ok {
+			l.markRead(s)
 			return l, openURL(s.URL)
 		}
 	case "openComments":
 		if s, ok := l.selected(); ok {
+			l.markRead(s)
 			return l, openURL(s.CommentsURL)
 		}
 	case "favorite":
@@ -364,6 +367,13 @@ func selectedStyle() lipgloss.Style {
 		st = st.Foreground(lipgloss.Color("15"))
 	}
 	return st
+}
+
+// markRead records a visit for a story opened outside the in-app comments view.
+func (l *listScreen) markRead(s lobsters.Story) {
+	if l.hist != nil && !l.noHist {
+		_ = l.hist.MarkIfUnread(s.ShortID, s.CommentCount, time.Now())
+	}
 }
 
 func (l *listScreen) isRead(id string) bool {

@@ -115,6 +115,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.stack = append(m.stack, newCommentsScreen(m.client, msg.story, since))
 		return m, m.stack[len(m.stack)-1].Init()
 	case openReaderMsg:
+		if !m.noHist && m.hist != nil {
+			_ = m.hist.MarkIfUnread(msg.story.ShortID, msg.story.CommentCount, time.Now())
+		}
 		m.stack = append(m.stack, newReaderScreen(msg.story))
 		return m, m.stack[len(m.stack)-1].Init()
 	case tea.KeyMsg:

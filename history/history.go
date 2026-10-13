@@ -117,3 +117,12 @@ func (s *Store) save() error {
 	}
 	return os.WriteFile(s.path, data, 0o644)
 }
+
+// MarkIfUnread records a visit only when the story has none, so an existing
+// entry's last-visit time and comment count stay intact.
+func (s *Store) MarkIfUnread(id string, commentCount int, at time.Time) error {
+	if s.IsRead(id) {
+		return nil
+	}
+	return s.Mark(id, commentCount, at)
+}
