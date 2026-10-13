@@ -24,6 +24,10 @@ fmt:
 vet:
 	go vet ./...
 
+install: release
+	@mkdir -p /usr/local/bin
+	install -m755 bin/lbx /usr/local/bin/.
+
 run:
 	go run ./cmd/lbx
 
