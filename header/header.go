@@ -25,7 +25,7 @@ func Render(width int, cats []categories.Category, active int, title string) str
 		tabs = append(tabs, style.CategoryOff.Render(c.Label()))
 	}
 
-	left := style.Header.Render("lbx") + " " + style.HeaderMuted.Render(Version)
+	left := style.Header.Render("🦞 lbx") + " " + style.HeaderMuted.Render(Version)
 	if title != "" {
 		left += "  " + style.HeaderMuted.Render(title)
 	}

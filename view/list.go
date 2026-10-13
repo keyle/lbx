@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/pkg/browser"
 
@@ -72,7 +73,7 @@ type listScreen struct {
 }
 
 func newListScreen(client *lobsters.Client, cats []categories.Category, fav *favorites.Store, hist *history.Store, noHist bool) *listScreen {
-	return &listScreen{client: client, cats: cats, fav: fav, hist: hist, noHist: noHist, spin: spinner.New()}
+	return &listScreen{client: client, cats: cats, fav: fav, hist: hist, noHist: noHist, spin: newSpinner()}
 }
 
 func (l *listScreen) current() categories.Category { return l.cats[l.active] }
@@ -171,11 +172,12 @@ func (l *listScreen) handleKey(msg tea.KeyMsg) (Screen, tea.Cmd) {
 		}
 	case "favorite":
 		if s, ok := l.selected(); ok && l.fav != nil {
-			_ = l.fav.Add(favorites.FromStory(s))
 			if l.current().Kind == categories.KindFavorites {
+				_ = l.fav.Remove(s.ShortID)
 				l.loading = true
 				return l, loadFeedCmd(l.client, l.current(), l.fav)
 			}
+			_ = l.fav.Add(favorites.FromStory(s))
 		}
 	case "unfavorite":
 		if s, ok := l.selected(); ok && l.fav != nil {
@@ -276,7 +278,7 @@ func (l *listScreen) View(width, height int) string {
 	}
 	if len(l.stories) == 0 {
 		if l.loading {
-			return style.Status.Render(l.spin.View() + " loading…")
+			return loadingView(l.spin, "loading…")
 		}
 		return style.Status.Render("no stories")
 	}
@@ -324,13 +326,14 @@ func (l *listScreen) renderRow(i, width int) string {
 	s := l.stories[i]
 	marker := "  "
 	if i == l.cursor {
-		marker = "> "
+		marker = "▸ "
 	}
 
 	titleStyle := style.Title
 	if i == l.cursor {
-		titleStyle = style.Selection
-	} else if l.isRead(s.ShortID) {
+		titleStyle = selectedStyle()
+	}
+	if l.isRead(s.ShortID) {
 		titleStyle = style.TitleRead
 	}
 	title := titleStyle.Render(s.Title)
@@ -338,18 +341,29 @@ func (l *listScreen) renderRow(i, width int) string {
 		title += " " + style.Domain.Render("("+domain+")")
 	}
 
-	meta := []string{}
-	if len(s.Tags) > 0 {
-		meta = append(meta, style.Tag.Render("["+strings.Join(s.Tags, " ")+"]"))
+	meta := []string{
+		style.Score.Render(fmt.Sprintf("%d pts", s.Score)),
+		style.Comments.Render(fmt.Sprintf("%d comments", s.CommentCount)),
+		style.Submitter.Render(s.SubmitterUser),
+		style.Meta.Render(timeago.Since(s.CreatedAt)),
 	}
-	meta = append(meta, style.Score.Render(fmt.Sprintf("%d pts", s.Score)))
-	meta = append(meta, style.Comments.Render(fmt.Sprintf("%d comments", s.CommentCount)))
-	meta = append(meta, style.Submitter.Render(s.SubmitterUser))
-	meta = append(meta, style.Meta.Render(timeago.Since(s.CreatedAt)))
+	if len(s.Tags) > 0 {
+		meta = append(meta, style.Meta.Render("["+strings.Join(s.Tags, " ")+"]"))
+	}
 
 	line1 := marker + title
 	line2 := "  " + strings.Join(meta, style.Meta.Render(" | "))
 	return ansi.Truncate(line1, width, "…") + "\n" + ansi.Truncate(line2, width, "…")
+}
+
+// selectedStyle is the title style of the cursor row: bold white unless the
+// theme sets a selection color.
+func selectedStyle() lipgloss.Style {
+	st := style.Selection
+	if _, unset := st.GetForeground().(lipgloss.NoColor); unset {
+		st = st.Foreground(lipgloss.Color("15"))
+	}
+	return st
 }
 
 func (l *listScreen) isRead(id string) bool {

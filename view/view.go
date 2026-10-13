@@ -1,6 +1,7 @@
 package view
 
 import (
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -180,7 +181,8 @@ func (m Model) View() string {
 	top := m.stack[len(m.stack)-1]
 	head := header.Render(m.width, m.cats, m.activeCat, top.Title())
 
-	bodyHeight := m.height - 1
+	// One row for the header and one blank padding row below it.
+	bodyHeight := m.height - 2
 	if bodyHeight < 1 {
 		bodyHeight = 1
 	}
@@ -191,21 +193,36 @@ func (m Model) View() string {
 			keysTitle += " — " + t
 		}
 		box := help.Render(keysTitle, top.Help())
-		return head + "\n" + lipgloss.Place(m.width, bodyHeight, lipgloss.Center, lipgloss.Center, box)
+		return head + "\n\n" + lipgloss.Place(m.width, bodyHeight, lipgloss.Center, lipgloss.Center, box)
 	}
 
+	inner := m.width - contentPad
 	if m.wide && m.width >= wideMin {
-		return head + "\n" + m.wideBody(top, bodyHeight)
+		return head + "\n\n" + indent(m.wideBody(top, inner, bodyHeight), contentPad)
 	}
-	return head + "\n" + top.View(m.width, bodyHeight)
+	return head + "\n\n" + indent(top.View(inner, bodyHeight), contentPad)
 }
 
-func (m Model) wideBody(top Screen, height int) string {
-	listW := m.width * 2 / 5
+// contentPad is the left padding applied to all body content, so list titles
+// line up with the app name in the header.
+const contentPad = 2
+
+// indent prefixes every line of s with n spaces.
+func indent(s string, n int) string {
+	pad := strings.Repeat(" ", n)
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = pad + l
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m Model) wideBody(top Screen, width, height int) string {
+	listW := width * 2 / 5
 	if listW < 40 {
 		listW = 40
 	}
-	rightW := m.width - listW - 1
+	rightW := width - listW - 1
 	if rightW < 20 {
 		rightW = 20
 	}

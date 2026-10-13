@@ -67,7 +67,7 @@ func newReaderScreen(story lobsters.Story) *readerScreen {
 		client: &http.Client{Timeout: 20 * time.Second},
 		story:  story,
 		kitty:  graphics.KittySupported(),
-		spin:   spinner.New(),
+		spin:   newSpinner(),
 	}
 }
 
@@ -283,7 +283,7 @@ func (r *readerScreen) View(width, height int) string {
 		}
 	}
 	if r.loading {
-		return style.Status.Render(r.spin.View() + " loading article…")
+		return loadingView(r.spin, "loading article…")
 	}
 	if r.art == nil {
 		return style.Status.Render("no article")

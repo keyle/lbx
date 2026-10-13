@@ -79,7 +79,7 @@ func newCommentsScreen(client *lobsters.Client, story lobsters.Story, since time
 		client:    client,
 		story:     story,
 		since:     since,
-		spin:      spinner.New(),
+		spin:      newSpinner(),
 		collapsed: map[string]bool{},
 	}
 }
@@ -421,7 +421,7 @@ func (c *commentsScreen) View(width, height int) string {
 		return style.Error.Render("error: " + c.err.Error())
 	}
 	if c.loading {
-		return style.Status.Render(c.spin.View() + " loading comments…")
+		return loadingView(c.spin, "loading comments…")
 	}
 	if c.tree == nil {
 		return style.Status.Render("no comments")
