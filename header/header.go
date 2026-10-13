@@ -9,8 +9,9 @@ import (
 	"noben.org/lbx/style"
 )
 
-// Version is the app version shown next to the name in the top bar.
-const Version = "1.0.0"
+// Version is the app version shown next to the name in the top bar. The
+// makefile sets it at build time via -ldflags "-X noben.org/lbx/header.Version=...".
+var Version = "dev"
 
 // Render draws the top bar: the app name and version, an optional muted status
 // after them, and the category tabs right-aligned, fitted to width.

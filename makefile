@@ -1,16 +1,18 @@
 BINARY := lbx
 BIN_DIR := bin
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+VERSION_FLAG := -X noben.org/lbx/header.Version=$(VERSION)
 
 .PHONY: all build release test lint fmt vet run clean tag install
 
 default: run
 
 build:
-	go build -gcflags="all=-N -l" -o $(BINARY) ./cmd/lbx
+	go build -gcflags="all=-N -l" -ldflags "$(VERSION_FLAG)" -o $(BINARY) ./cmd/lbx
 
 release: clean
 	mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o $(BIN_DIR)/$(BINARY) ./cmd/lbx
+	CGO_ENABLED=0 go build -trimpath -ldflags "-s -w $(VERSION_FLAG)" -o $(BIN_DIR)/$(BINARY) ./cmd/lbx
 
 test:
 	go test ./...
@@ -47,7 +49,7 @@ install: release
 	install -m755 bin/lbx /usr/local/bin/.
 
 run:
-	go run ./cmd/lbx
+	go run -ldflags "$(VERSION_FLAG)" ./cmd/lbx
 
 clean:
 	rm -f $(BINARY)
