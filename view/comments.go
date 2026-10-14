@@ -429,6 +429,10 @@ func (c *commentsScreen) maxScroll() int {
 }
 
 func (c *commentsScreen) View(width, height int) string {
+	if width != c.width && len(c.lines) > 0 {
+		c.width = width
+		c.rebuild()
+	}
 	c.width, c.height = width, height
 	if c.err != nil {
 		return style.Error.Render("error: " + c.err.Error())
@@ -463,7 +467,7 @@ func (c *commentsScreen) View(width, height int) string {
 	}
 	body := b.String()
 	if c.picker.active {
-		body = overlayTop(body, c.picker.lines(width, height/2), width)
+		body = overlayTop(body, c.picker.lines(width, height/2))
 	}
 	return body
 }

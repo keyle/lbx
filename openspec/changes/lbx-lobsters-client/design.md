@@ -27,7 +27,7 @@ Constraint discovered: lobste.rs fronts routes (including `/search`) with an **A
 ## Decisions
 
 ### Package layout mirrors circumflex
-Keep the proven separation: `cmd/lbx` (entrypoint/flags), `lobsters` (HTTP client + JSON decoding), `domain` (story/comment models and the comment tree), `view` (screen stack + main model), `comment`, `article`, `categories`, `header`, `headline`, `highlight`, `history`, `favorites`, `navigation`, `help`, `layout`, `style`, `theme`, `settings`, `timeago`, `render` (HTML→ANSI), `nerdfonts`.
+Keep the proven separation: `cmd/lbx` (entrypoint/flags), `lobsters` (HTTP client + JSON decoding), `domain` (story/comment models and the comment tree), `view` (screen stack + main model), `article` (readable extraction), `categories`, `header`, `history`, `favorites`, `help`, `keymap`, `style`, `theme`, `settings`, `timeago`, `render` (HTML→ANSI), `version`.
 *Alternatives:* a flatter single-package app (simpler to start, but the views/rendering/history concerns quickly tangle) or a framework-heavy MVU split. Reusing clx's boundaries keeps files small and mirrors a battle-tested shape.
 
 ### JSON client over typed structs
@@ -54,9 +54,9 @@ State lives under the config dir, resolved from `$XDG_CONFIG_HOME` (default `~/.
 `/` prompts, then opens `https://lobste.rs/search?q=<term>&what=stories` via `github.com/pkg/browser`. No HTTP request is made to search routes.
 *Alternatives:* scraping `/search` (blocked by Anubis and fragile) or shipping no search (fails the parity goal).
 
-### Best-effort images behind a capability check
-Detect Kitty graphics support from the environment and, when present, emit the graphics protocol for reader-mode images; otherwise render alt text.
-*Alternatives:* always render placeholders (loses parity) or add a heavy graphics dependency. A guarded, best-effort path keeps the core dependency-free.
+### Images as text placeholders
+Reader mode renders every image as an `[img (alt text)]` placeholder rather than displaying it inline, keeping the client dependency-free.
+*Alternatives:* the Kitty graphics protocol (deferred) or a native image library (a heavy dependency for a read-only text client).
 
 ## Risks / Trade-offs
 
@@ -74,4 +74,3 @@ Greenfield: no data or users to migrate. Build order: scaffold module and interf
 
 - Exact set of lobste.rs tags to surface as optional `--tag` feeds, and whether to add a dedicated tag picker view in a later change.
 - Whether to support Nerd Font icons on by default or behind a flag.
-- How far to take Kitty image support (inline only vs. protocol-level placement/scroll) — deferred; the spec only requires best-effort display.

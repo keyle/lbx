@@ -25,14 +25,6 @@ func TestWideAutoLayout(t *testing.T) {
 	}
 }
 
-func TestWideNever(t *testing.T) {
-	m := New(Options{Client: lobsters.New(), WideView: "never"})
-	got, _ := m.Update(sizeMsg(300, 40))
-	if got.(Model).wide {
-		t.Error("wide-view never should stay single pane")
-	}
-}
-
 func TestWideToggle(t *testing.T) {
 	m := New(Options{Client: lobsters.New()})
 	sized, _ := m.Update(sizeMsg(200, 40))

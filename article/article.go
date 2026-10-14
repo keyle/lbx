@@ -10,10 +10,9 @@ import (
 	"strings"
 
 	readability "github.com/go-shiori/go-readability"
-)
 
-// UserAgent identifies the client when fetching article pages.
-const UserAgent = "lbx/0.1 (+https://github.com/noben/lbx)"
+	"noben.org/lbx/version"
+)
 
 // maxBytes caps how much of a page is read before extraction.
 const maxBytes = 8 << 20
@@ -52,7 +51,7 @@ func Fetch(ctx context.Context, client *http.Client, rawURL string) (*Article, e
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("User-Agent", version.UserAgent())
 	req.Header.Set("Accept", "text/html,application/xhtml+xml")
 
 	resp, err := client.Do(req)
@@ -61,7 +60,14 @@ func Fetch(ctx context.Context, client *http.Client, rawURL string) (*Article, e
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("article: %s: %s", rawURL, resp.Status)
+		switch {
+		case resp.StatusCode == http.StatusTooManyRequests:
+			return nil, fmt.Errorf("article: %s: rate limited, try again later", rawURL)
+		case resp.StatusCode >= 400 && resp.StatusCode < 500:
+			return nil, fmt.Errorf("%w: %s: %s", ErrNotReadable, rawURL, resp.Status)
+		default:
+			return nil, fmt.Errorf("article: %s: %s", rawURL, resp.Status)
+		}
 	}
 	if ct := resp.Header.Get("Content-Type"); ct != "" && !strings.Contains(ct, "html") {
 		return nil, fmt.Errorf("%w: content-type %q", ErrNotReadable, ct)

@@ -21,33 +21,22 @@ The client SHALL display a story's comments as a nested thread, indented by repl
 - **WHEN** a comment body contains a code block
 - **THEN** the code is rendered as a distinct monospaced block
 
-### Requirement: Read-mode navigation
-In read mode the user SHALL scroll with `j`/`k` and `Ctrl-D`/`Ctrl-U`, move to the start/end with `g`/`G`, and jump between top-level comments with `n`/`N`.
+### Requirement: Comment navigation
+The highlighted comment SHALL move with `j`/`k`, scroll by half a page with `Ctrl-D`/`Ctrl-U`, and jump to the start/end with `g`/`G`.
 
-#### Scenario: Jump between top-level comments
-- **WHEN** the user presses `n` in read mode
-- **THEN** the view moves to the next top-level comment
+#### Scenario: Move the highlight
+- **WHEN** the user presses `j`
+- **THEN** the highlight moves to the next visible comment
 
 ### Requirement: Expand and collapse
-The user SHALL collapse the current thread one level with `h`, expand it with `l`, and toggle all threads with `Enter`.
+The user SHALL collapse the highlighted thread with `h`, expand it with `l`, expand the whole sub-thread with `L`, and expand or collapse all threads with `a`/`c`.
 
-#### Scenario: Collapse one level
+#### Scenario: Collapse the highlighted thread
 - **WHEN** the user presses `h`
-- **THEN** the current comment's replies are hidden
-
-#### Scenario: Toggle all
-- **WHEN** the user presses `Enter` in read mode
-- **THEN** all threads collapse if any are expanded, otherwise all expand
-
-### Requirement: Navigate mode
-Pressing `a` SHALL enter navigate mode, where the user selects individual comments with `j`/`k`, collapses or expands the selected thread with `h`/`l`, and returns to read mode with `Esc`.
-
-#### Scenario: Enter and leave navigate mode
-- **WHEN** the user presses `a`
-- **THEN** the first comment becomes selected
-- **WHEN** the user presses `Esc`
-- **THEN** the view returns to read mode
-
-#### Scenario: Collapse selected thread
-- **WHEN** the user selects a comment and presses `h`
 - **THEN** only that comment's replies are hidden
+
+#### Scenario: Toggle all threads
+- **WHEN** the user presses `c`
+- **THEN** every thread is collapsed
+- **WHEN** the user presses `a`
+- **THEN** every thread is expanded

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
@@ -58,8 +59,9 @@ type file struct {
 	Stories []Favorite `toml:"stories"`
 }
 
-// Store persists favorites to a TOML file.
+// Store persists favorites to a TOML file. It is safe for concurrent use.
 type Store struct {
+	mu    sync.Mutex
 	path  string
 	items []Favorite
 }
@@ -82,11 +84,21 @@ func Load(path string) (*Store, error) {
 	return s, nil
 }
 
-// List returns the stored favorites in insertion order.
-func (s *Store) List() []Favorite { return s.items }
+// List returns a copy of the stored favorites in insertion order.
+func (s *Store) List() []Favorite {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]Favorite(nil), s.items...)
+}
 
 // Has reports whether a short id is already saved.
 func (s *Store) Has(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.has(id)
+}
+
+func (s *Store) has(id string) bool {
 	for _, it := range s.items {
 		if it.ShortID == id {
 			return true
@@ -97,7 +109,9 @@ func (s *Store) Has(id string) bool {
 
 // Add saves a favorite and persists, ignoring duplicates by short id.
 func (s *Store) Add(f Favorite) error {
-	if s.Has(f.ShortID) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.has(f.ShortID) {
 		return nil
 	}
 	s.items = append(s.items, f)
@@ -106,6 +120,8 @@ func (s *Store) Add(f Favorite) error {
 
 // Remove deletes a favorite by short id and persists.
 func (s *Store) Remove(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	out := make([]Favorite, 0, len(s.items))
 	for _, it := range s.items {
 		if it.ShortID != id {

@@ -150,8 +150,12 @@ func TestLinesHeadingMetadata(t *testing.T) {
 
 func TestImagePlaceholder(t *testing.T) {
 	got := HTML(`<img src="x.png" alt="a cat">`, 40)
-	if !strings.Contains(got, "a cat") {
-		t.Errorf("image alt text lost: %q", got)
+	if !strings.Contains(got, "[img (a cat)]") {
+		t.Errorf("image placeholder = %q", got)
+	}
+	got = HTML(`<img src="x.png">`, 40)
+	if !strings.Contains(got, "[img]") {
+		t.Errorf("image without alt = %q", got)
 	}
 }
 

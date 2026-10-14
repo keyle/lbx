@@ -4,14 +4,12 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"noben.org/lbx/categories"
 	"noben.org/lbx/style"
+	"noben.org/lbx/version"
 )
-
-// Version is the app version shown next to the name in the top bar. The
-// makefile sets it at build time via -ldflags "-X noben.org/lbx/header.Version=...".
-var Version = "dev"
 
 // Render draws the top bar: the app name and version, an optional muted status
 // after them, and the category tabs right-aligned, fitted to width.
@@ -25,15 +23,23 @@ func Render(width int, cats []categories.Category, active int, title string) str
 		tabs = append(tabs, style.CategoryOff.Render(c.Label()))
 	}
 
-	left := style.Header.Render("🦞 lbx") + " " + style.HeaderMuted.Render(Version)
+	left := style.Header.Render("🦞 lbx") + " " + style.HeaderMuted.Render(version.Version)
 	if title != "" {
 		left += "  " + style.HeaderMuted.Render(title)
 	}
 	right := strings.Join(tabs, " ")
-
-	leftW := lipgloss.Width(left)
 	rightW := lipgloss.Width(right)
-	pad := width - leftW - rightW
+
+	// Keep the right-aligned category tabs visible; truncate the left side to
+	// make room, and fall back to truncating the tabs only if they cannot fit.
+	if rightW >= width {
+		return ansi.Truncate(right, width, "…")
+	}
+	if avail := width - rightW - 1; lipgloss.Width(left) > avail {
+		left = ansi.Truncate(left, avail, "…")
+	}
+
+	pad := width - lipgloss.Width(left) - rightW
 	if pad < 1 {
 		pad = 1
 	}

@@ -18,7 +18,7 @@ Every scrollable view SHALL support scrolling with `j`/`k` and `Ctrl-D`/`Ctrl-U`
 - **THEN** the view scrolls down by half a page
 
 ### Requirement: Global keymap
-The main view SHALL provide `Enter` (view comments), `Space` (reader mode), `Tab` (next category), `/` (search), `r` (refresh), `o` (open story in browser), `c` (open comments in browser), `f` (add favorite), `x` (remove favorite), `u` (toggle read), `z` (toggle wide view), `i` (help), and `q` (quit).
+The main view SHALL provide `Enter` (view comments), `Space` (reader mode), `Tab` (next category), `/` (search), `r` (refresh), `o` (open story in browser), `c` (open comments in browser), `f` (toggle favorite), `x` (remove favorite), `u` (toggle read), `z` (toggle wide view), `i` (help), and `q` (quit).
 
 #### Scenario: Toggle read
 - **WHEN** the user presses `u` on a story

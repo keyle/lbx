@@ -15,7 +15,7 @@ Pressing `Space` on a story SHALL fetch the linked URL and extract its main read
 
 #### Scenario: Non-article target
 - **WHEN** the linked URL is not an HTML article (for example a PDF or video)
-- **THEN** the client reports that the article cannot be shown and offers to open it in the browser
+- **THEN** the client reports that the article cannot be shown, and `o` opens the URL in the system browser
 
 ### Requirement: Content rendering
 The reader SHALL render headings, paragraphs, lists, blockquotes, code blocks, and inline links with terminal formatting using the active theme.
@@ -38,9 +38,9 @@ The user SHALL be able to search within the loaded content with `/` and step thr
 - **WHEN** the user presses `/`, enters a term, and presses `Enter`
 - **THEN** matches are highlighted and `n` moves to the next match
 
-### Requirement: Image display on supported terminals
-On terminals with Kitty graphics support, pressing `Enter` in reader mode SHALL attempt to display the article's images; on unsupported terminals images SHALL be shown as their alt text or a placeholder.
+### Requirement: Image placeholders
+Images in article content SHALL be rendered as an `[img (alt text)]` placeholder rather than displayed inline.
 
-#### Scenario: Unsupported terminal
-- **WHEN** the terminal lacks Kitty graphics support and the user presses `Enter`
-- **THEN** images are represented by alt text or a placeholder without error
+#### Scenario: Image placeholder
+- **WHEN** the extracted article contains an image with alt text
+- **THEN** it is shown as `[img (alt text)]` in place of the image

@@ -23,10 +23,3 @@ The user SHALL be able to toggle wide view for the current session with `z`.
 #### Scenario: Toggle on
 - **WHEN** the user presses `z` in single-pane mode on a wide enough terminal
 - **THEN** the layout switches to dual-pane
-
-### Requirement: Disable wide view
-A `--wide-view` flag SHALL allow disabling dual-pane mode entirely.
-
-#### Scenario: Disabled
-- **WHEN** the user runs `lbx --wide-view never`
-- **THEN** the client stays in single-pane mode even on wide terminals

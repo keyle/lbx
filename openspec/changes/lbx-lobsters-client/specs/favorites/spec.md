@@ -6,12 +6,16 @@ Save interesting stories locally so the user can find and revisit them later.
 
 ## ADDED Requirements
 
-### Requirement: Add and remove favorites
-The user SHALL add the highlighted story to favorites with `f` and remove it with `x`.
+### Requirement: Toggle favorites
+The user SHALL toggle the highlighted story in favorites with `f`, adding it when absent and removing it when present, and SHALL remove it with `x`.
 
 #### Scenario: Add
-- **WHEN** the user presses `f` on a highlighted story
+- **WHEN** the user presses `f` on a story that is not a favorite
 - **THEN** the story is added to favorites
+
+#### Scenario: Remove by toggling
+- **WHEN** the user presses `f` on a story that is already a favorite
+- **THEN** the story is removed from favorites
 
 #### Scenario: Remove
 - **WHEN** the user presses `x` on a story that is already a favorite

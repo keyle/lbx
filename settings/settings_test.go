@@ -52,22 +52,22 @@ func TestLoadMissingUsesDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.WideView != "auto" || cfg.NoHistory || len(cfg.Categories) != 4 {
+	if cfg.NoHistory || len(cfg.Categories) != 4 {
 		t.Errorf("Load missing = %+v, want defaults", cfg)
 	}
 }
 
 func TestLoadFileOverridesDefaults(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.toml")
-	if err := os.WriteFile(path, []byte("wide_view = \"never\"\nno_history = true\ncategories = [\"active\"]\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("no_history = true\ncategories = [\"active\"]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.WideView != "never" || !cfg.NoHistory {
-		t.Errorf("Load = %+v, want wide_view never / no_history true", cfg)
+	if !cfg.NoHistory {
+		t.Errorf("Load = %+v, want no_history true", cfg)
 	}
 	if len(cfg.Categories) != 1 || cfg.Categories[0] != "active" {
 		t.Errorf("Categories = %v", cfg.Categories)
@@ -75,11 +75,10 @@ func TestLoadFileOverridesDefaults(t *testing.T) {
 }
 
 func TestOverridesApply(t *testing.T) {
-	cfg := Config{Categories: []string{"hottest"}, WideView: "auto"}
-	wide := "never"
+	cfg := Config{Categories: []string{"hottest"}}
 	noHistory := true
-	got := Overrides{WideView: &wide, NoHistory: &noHistory}.Apply(cfg)
-	if got.WideView != "never" || !got.NoHistory {
+	got := Overrides{NoHistory: &noHistory}.Apply(cfg)
+	if !got.NoHistory {
 		t.Errorf("Apply = %+v", got)
 	}
 	if len(got.Categories) != 1 || got.Categories[0] != "hottest" {
@@ -100,7 +99,7 @@ func TestWriteDefaultConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.WideView != "auto" || cfg.NoHistory || len(cfg.Categories) != 4 {
+	if cfg.NoHistory || len(cfg.Categories) != 4 {
 		t.Errorf("written config = %+v", cfg)
 	}
 }

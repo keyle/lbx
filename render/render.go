@@ -55,7 +55,6 @@ type context struct {
 	italic  bool
 	code    bool
 	link    bool
-	pre     bool
 	heading bool
 }
 
@@ -125,10 +124,6 @@ func (r *Renderer) element(n *html.Node, lw *lineWriter, c context) {
 		c.italic = true
 		r.children(n, lw, c)
 	case "code":
-		if c.pre {
-			r.children(n, lw, c)
-			return
-		}
 		c.code = true
 		r.children(n, lw, c)
 	case "pre":
@@ -247,14 +242,15 @@ func (r *Renderer) appendHref(n *html.Node, lw *lineWriter, c context) {
 func (r *Renderer) image(n *html.Node, lw *lineWriter) {
 	alt := ""
 	for _, attr := range n.Attr {
-		if attr.Key == "alt" && attr.Val != "" {
-			alt = attr.Val
+		if attr.Key == "alt" {
+			alt = strings.TrimSpace(attr.Val)
 		}
 	}
-	if alt == "" {
-		alt = "image"
+	label := "[img]"
+	if alt != "" {
+		label = "[img (" + alt + ")]"
 	}
-	lw.word(r.Styles.Quote.Render("[image: " + alt + "]"))
+	lw.word(r.Styles.Quote.Render(label))
 }
 
 func nodeText(n *html.Node) string {

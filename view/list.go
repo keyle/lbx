@@ -37,8 +37,8 @@ var listKeymap = keymap.Map{
 	{Name: "openComments", Keys: []string{"c"}},
 	{Name: "tab", Keys: []string{"tab"}, Help: "Tab", Desc: "next category"},
 	{Name: "refresh", Keys: []string{"r"}, Help: "r", Desc: "refresh"},
-	{Name: "favorite", Keys: []string{"f"}, Help: "f / x", Desc: "add / remove favorite"},
-	{Name: "unfavorite", Keys: []string{"x"}},
+	{Name: "favorite", Keys: []string{"f"}, Help: "f", Desc: "toggle favorite"},
+	{Name: "unfavorite", Keys: []string{"x"}, Help: "x", Desc: "remove favorite"},
 	{Name: "toggleRead", Keys: []string{"u"}, Help: "u", Desc: "toggle read"},
 	{Name: "search", Keys: []string{"/"}, Help: "/", Desc: "search"},
 	{Name: "help", Keys: []string{"i"}, Help: "? / i", Desc: "help"},
@@ -217,8 +217,8 @@ func (l *listScreen) handleSearchKey(msg tea.KeyMsg) (Screen, tea.Cmd) {
 		l.searching = false
 		l.query = ""
 	case tea.KeyBackspace:
-		if l.query != "" {
-			l.query = l.query[:len(l.query)-1]
+		if r := []rune(l.query); len(r) > 0 {
+			l.query = string(r[:len(r)-1])
 		}
 	case tea.KeyRunes, tea.KeySpace:
 		l.query += string(msg.Runes)
@@ -352,7 +352,7 @@ func (l *listScreen) renderRow(i, width int) string {
 		style.Meta.Render(timeago.Since(s.CreatedAt)),
 	}
 	if len(s.Tags) > 0 {
-		meta = append(meta, style.Meta.Render("["+strings.Join(s.Tags, " ")+"]"))
+		meta = append(meta, style.Tag.Render("["+strings.Join(s.Tags, " ")+"]"))
 	}
 
 	line1 := marker + title

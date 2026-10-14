@@ -6,8 +6,8 @@ import (
 	"noben.org/lbx/theme"
 )
 
-// Styles used across the UI. Colors are placeholders until theme.toml loading
-// (milestone 6) overrides them via Apply.
+// Styles used across the UI. The defaults below are overridden by a loaded
+// theme.toml via Apply.
 var (
 	Header      = lipgloss.NewStyle().Bold(true)
 	HeaderMuted = lipgloss.NewStyle().Faint(true)

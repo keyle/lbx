@@ -54,7 +54,6 @@ func runUI(args []string) error {
 	fs := flag.NewFlagSet("lbx", flag.ContinueOnError)
 	fs.Usage = usage
 	catsFlag := fs.String("categories", "", "comma-separated categories")
-	wideFlag := fs.String("wide-view", "", "wide layout: auto, never, or always")
 	noHistFlag := fs.Bool("no-history", false, "disable read-history tracking")
 	var tags tagList
 	fs.Var(&tags, "tag", "add a tag feed (repeatable)")
@@ -83,9 +82,6 @@ func runUI(args []string) error {
 	if isSet(fs, "tag") {
 		ov.Tags = tags
 	}
-	if isSet(fs, "wide-view") {
-		ov.WideView = wideFlag
-	}
 	if isSet(fs, "no-history") {
 		ov.NoHistory = noHistFlag
 	}
@@ -111,7 +107,6 @@ func runUI(args []string) error {
 	model := view.New(view.Options{
 		Client:     lobsters.New(),
 		Categories: cats,
-		WideView:   cfg.WideView,
 		Favorites:  fav,
 		History:    hist,
 		NoHistory:  cfg.NoHistory,
@@ -216,7 +211,6 @@ usage:
 flags:
   --categories <list>    comma-separated categories
   --tag <name>           add a tag feed (repeatable)
-  --wide-view <mode>     auto, never, or always
   --no-history           disable read-history tracking
 `)
 }

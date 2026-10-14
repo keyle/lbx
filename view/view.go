@@ -34,7 +34,6 @@ const wideMin = 180
 type Options struct {
 	Client     *lobsters.Client
 	Categories []categories.Category
-	WideView   string // "auto" (default), "never", or "always"
 	Favorites  *favorites.Store
 	History    *history.Store
 	NoHistory  bool
@@ -55,9 +54,8 @@ type Model struct {
 	height    int
 	showHelp  bool
 
-	wideMode string
-	wide     bool
-	wideSet  bool
+	wide    bool
+	wideSet bool
 }
 
 // New builds the root model with a list screen at the bottom of the stack.
@@ -66,11 +64,7 @@ func New(opts Options) Model {
 	if len(cats) == 0 {
 		cats = categories.Default()
 	}
-	mode := opts.WideView
-	if mode == "" {
-		mode = "auto"
-	}
-	m := Model{client: opts.Client, cats: cats, wideMode: mode, fav: opts.Favorites, hist: opts.History, noHist: opts.NoHistory}
+	m := Model{client: opts.Client, cats: cats, fav: opts.Favorites, hist: opts.History, noHist: opts.NoHistory}
 	m.stack = []Screen{newListScreen(opts.Client, cats, opts.Favorites, opts.History, opts.NoHistory)}
 	return m
 }
@@ -162,14 +156,7 @@ func (m *Model) capturingInput() bool {
 }
 
 func (m *Model) updateWide() {
-	switch {
-	case m.wideMode == "never":
-		m.wide = false
-	case m.wideSet:
-		// keep the user's session choice
-	case m.wideMode == "always":
-		m.wide = true
-	default:
+	if !m.wideSet {
 		m.wide = m.width >= wideMin
 	}
 	if m.width < wideMin {

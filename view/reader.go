@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"noben.org/lbx/article"
-	"noben.org/lbx/graphics"
 	"noben.org/lbx/help"
 	"noben.org/lbx/keymap"
 	"noben.org/lbx/lobsters"
@@ -31,7 +30,7 @@ var readerKeymap = keymap.Map{
 	{Name: "prevHeading", Keys: []string{"N"}},
 	{Name: "search", Keys: []string{"/"}, Help: "/", Desc: "search in article"},
 	{Name: "links", Keys: []string{"tab"}, Help: "Tab", Desc: "select link"},
-	{Name: "images", Keys: []string{"enter"}, Help: "Enter", Desc: "show images"},
+	{Name: "browser", Keys: []string{"o"}, Help: "o", Desc: "open in browser"},
 	{Name: "esc", Keys: []string{"esc"}, Help: "Esc", Desc: "clear search / back"},
 	{Name: "back", Keys: []string{"q"}, Help: "q", Desc: "back"},
 }
@@ -56,9 +55,6 @@ type readerScreen struct {
 	matches   []int
 	matchIdx  int
 
-	kitty  bool
-	status string
-
 	picker linkPicker
 }
 
@@ -66,7 +62,6 @@ func newReaderScreen(story lobsters.Story) *readerScreen {
 	return &readerScreen{
 		client: &http.Client{Timeout: 20 * time.Second},
 		story:  story,
-		kitty:  graphics.KittySupported(),
 		spin:   newSpinner(),
 	}
 }
@@ -156,8 +151,8 @@ func (r *readerScreen) handleKey(msg tea.KeyMsg) (Screen, tea.Cmd) {
 		if r.art != nil {
 			r.picker.toggle(render.Links(r.art.Content))
 		}
-	case "images":
-		r.showImages()
+	case "browser":
+		return r, openURL(r.browserURL())
 	}
 	return r, nil
 }
@@ -171,8 +166,8 @@ func (r *readerScreen) handleSearchKey(msg tea.KeyMsg) (Screen, tea.Cmd) {
 		r.searching = false
 		r.query = ""
 	case tea.KeyBackspace:
-		if r.query != "" {
-			r.query = r.query[:len(r.query)-1]
+		if runes := []rune(r.query); len(runes) > 0 {
+			r.query = string(runes[:len(runes)-1])
 		}
 	case tea.KeyRunes, tea.KeySpace:
 		r.query += string(msg.Runes)
@@ -197,12 +192,13 @@ func (r *readerScreen) commitSearch() {
 	}
 }
 
-func (r *readerScreen) showImages() {
-	if r.kitty {
-		r.status = "images: kitty graphics available (shown as placeholders)"
-	} else {
-		r.status = "images: terminal has no graphics support; shown as alt text"
+// browserURL is the URL the reader offers to the system browser: the article
+// itself, or the discussion page for a story without an external URL.
+func (r *readerScreen) browserURL() string {
+	if r.story.URL != "" {
+		return r.story.URL
 	}
+	return r.story.CommentsURL
 }
 
 func (r *readerScreen) step(delta int) {
@@ -276,10 +272,13 @@ func (r *readerScreen) rebuild() {
 }
 
 func (r *readerScreen) View(width, height int) string {
+	if width != r.width {
+		r.dirty = true
+	}
 	r.width, r.height = width, height
 	if r.err != nil {
 		if r.art == nil {
-			return style.Error.Render("cannot read article: " + r.err.Error() + "\n\npress o in the list to open it in your browser")
+			return style.Error.Render("cannot read article: " + r.err.Error() + "\n\npress o to open it in your browser")
 		}
 	}
 	if r.loading {
@@ -291,9 +290,12 @@ func (r *readerScreen) View(width, height int) string {
 	if r.dirty || len(r.lines) == 0 {
 		r.rebuild()
 	}
+	if r.maxScroll() < r.scroll {
+		r.scroll = r.maxScroll()
+	}
 
 	bodyHeight := height
-	if r.searching || r.status != "" {
+	if r.searching {
 		bodyHeight--
 	}
 	if bodyHeight < 1 {
@@ -318,12 +320,10 @@ func (r *readerScreen) View(width, height int) string {
 
 	if r.searching {
 		b.WriteString("\n" + style.Status.Render("/"+r.query+"█"))
-	} else if r.status != "" {
-		b.WriteString("\n" + style.Meta.Render(r.status))
 	}
 	body := b.String()
 	if r.picker.active {
-		body = overlayTop(body, r.picker.lines(width, height/2), width)
+		body = overlayTop(body, r.picker.lines(width, height/2))
 	}
 	return body
 }

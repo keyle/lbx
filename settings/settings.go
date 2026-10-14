@@ -61,7 +61,6 @@ func (p Paths) EnsureCacheDir() error { return os.MkdirAll(p.Cache, 0o755) }
 type Config struct {
 	Categories []string `toml:"categories"`
 	Tags       []string `toml:"tags"`
-	WideView   string   `toml:"wide_view"`
 	NoHistory  bool     `toml:"no_history"`
 }
 
@@ -69,7 +68,6 @@ type Config struct {
 func Default() Config {
 	return Config{
 		Categories: []string{"hottest", "newest", "active", "favorites"},
-		WideView:   "auto",
 	}
 }
 
@@ -101,15 +99,9 @@ categories = ["hottest", "newest", "active", "favorites"]
 # Extra tag-restricted feeds appended to the rotation.
 tags = []
 
-# Dual-pane layout: "auto", "never", or "always".
-wide_view = "auto"
-
 # Disable read-history tracking.
 no_history = false
 `
-
-// DefaultTOML is the text of the default config.toml.
-func DefaultTOML() string { return defaultConfigTOML }
 
 // WriteDefaultConfig writes config.toml with the default settings, creating
 // the config directory. It returns the path written.
@@ -129,7 +121,6 @@ func (p Paths) WriteDefaultConfig() (string, error) {
 type Overrides struct {
 	Categories []string
 	Tags       []string
-	WideView   *string
 	NoHistory  *bool
 }
 
@@ -140,9 +131,6 @@ func (o Overrides) Apply(cfg Config) Config {
 	}
 	if o.Tags != nil {
 		cfg.Tags = o.Tags
-	}
-	if o.WideView != nil {
-		cfg.WideView = *o.WideView
 	}
 	if o.NoHistory != nil {
 		cfg.NoHistory = *o.NoHistory

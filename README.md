@@ -17,7 +17,8 @@ There is no login, voting, or commenting — browsing and reading only.
 - Link selector opens links in place — lobste.rs discussions as comments,
   everything else as reader content.
 - Wide (dual-pane) view on terminals 180 columns or wider.
-- Favorites (`f`/`x`, `lbx add <id>`) persisted to `favorites.toml`.
+- Favorites (`f` toggles, `x` removes, `lbx add <id>`) persisted to
+  `favorites.toml`.
 - Read history marks visited stories and highlights new comments; disable with
   `--no-history`, clear with `lbx clear-history`.
 - `/` opens a lobste.rs search in your browser.
@@ -57,7 +58,8 @@ go run ./cmd/lbx
 | `Tab`     | next category               |
 | `r`       | refresh                     |
 | `/`       | search (opens the browser)  |
-| `f` / `x` | add / remove favorite       |
+| `f`       | toggle favorite             |
+| `x`       | remove favorite             |
 | `u`       | toggle read                 |
 | `z`       | toggle wide view            |
 | `i`       | help                        |
@@ -67,16 +69,14 @@ go run ./cmd/lbx
 
 | Key       | Action                          |
 | --------- | ------------------------------- |
-| `j` / `k` | scroll down / up                |
+| `j` / `k` | move the highlighted comment    |
 | `Ctrl-D` / `Ctrl-U` | half-page down / up    |
 | `g` / `G` | top / bottom                    |
-| `n` / `N` | next / previous top-level comment |
 | `h` / `l` | collapse / expand thread        |
-| `Enter`   | toggle all threads              |
-| `a`       | navigate comments               |
+| `L`       | expand sub-thread               |
+| `a` / `c` | expand / collapse all           |
 | `Tab`     | select link                     |
-| `Esc`     | leave navigate mode / back      |
-| `q`       | back                            |
+| `q` / `Esc` | back                          |
 
 ### Reader
 
@@ -88,7 +88,7 @@ go run ./cmd/lbx
 | `n` / `N` | next / previous heading or match |
 | `/`       | search in article               |
 | `Tab`     | select link                     |
-| `Enter`   | show images                     |
+| `o`       | open article in the browser     |
 | `Esc`     | clear search / back             |
 | `q`       | back                            |
 
@@ -98,7 +98,6 @@ go run ./cmd/lbx
 | ----------------------- | ---------------------------------------------- |
 | `--categories <list>`   | comma-separated categories to show, in order   |
 | `--tag <name>`          | add a tag feed (repeatable)                    |
-| `--wide-view <mode>`    | `auto` (default), `never`, or `always`         |
 | `--no-history`          | disable read-history tracking                  |
 
 Flags override values in `config.toml`.
@@ -119,7 +118,7 @@ Config and theme live under `$XDG_CONFIG_HOME/lbx` (default `~/.config/lbx`);
 history and cache under `$XDG_CACHE_HOME/lbx` (default `~/.cache/lbx`). The XDG
 variables take precedence on every platform, including macOS.
 
-- `config.toml` — categories, tag feeds, wide-view mode, history toggle.
+- `config.toml` — categories, tag feeds, history toggle.
 - `theme.toml` — ANSI 256-color numbers per element; empty values fall back to
   the terminal's default.
 - `favorites.toml` — saved stories.
@@ -130,9 +129,8 @@ variables take precedence on every platform, including macOS.
 - **Search uses the browser.** lobste.rs fronts its `/search` route with an
   [Anubis](https://github.com/TecharoHQ/anubis) proof-of-work challenge, so `lbx`
   opens the search page in your default browser instead of fetching it.
-- **Images are best-effort.** Reader mode detects Kitty-graphics terminals and
-  renders alt-text placeholders elsewhere; true inline image placement is not
-  implemented yet.
+- **Images are not displayed.** Reader mode renders each image as an
+  `[img (alt text)]` placeholder; inline image placement is not implemented.
 - **Read-only client.** It uses only lobste.rs's unauthenticated JSON endpoints
   (`/hottest.json`, `/newest.json`, `/active.json`, `/t/<tag>.json`,
   `/s/<id>.json`) with a descriptive User-Agent, timeouts, and a short feed

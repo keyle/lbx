@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"noben.org/lbx/version"
 )
 
 func TestFeedRequests(t *testing.T) {
@@ -31,8 +33,8 @@ func TestFeedRequests(t *testing.T) {
 	if lastPath != "/hottest.json" {
 		t.Errorf("path = %q, want /hottest.json", lastPath)
 	}
-	if lastUA != UserAgent {
-		t.Errorf("User-Agent = %q, want %q", lastUA, UserAgent)
+	if lastUA != version.UserAgent() {
+		t.Errorf("User-Agent = %q, want %q", lastUA, version.UserAgent())
 	}
 
 	if _, err := c.Tag(context.Background(), "go"); err != nil {

@@ -14,7 +14,7 @@ first milestone lives in the OpenSpec change
 
 - [x] Confirm binary name `lbx` and module `noben.org/lbx`
 - [ ] `git init` and initial commit
-- [ ] Scaffold package layout: `cmd/lbx`, `lobsters`, `domain`, `view`, `render`, `style`, `theme`, `settings`, `timeago`, `history`, `favorites`, `help`, `categories`, `header`, `highlight`
+- [ ] Scaffold package layout: `cmd/lbx`, `lobsters`, `domain`, `view`, `render`, `style`, `theme`, `settings`, `timeago`, `history`, `favorites`, `help`, `categories`, `header`
 - [ ] Add dependencies: bubbletea, lipgloss, bubbles, go-readability, chroma, go-toml/v2, pkg/browser, x/net/html
 - [ ] Add Makefile (`build`, `test`, `lint`)
 - [ ] Add LICENSE and README skeleton
@@ -43,12 +43,12 @@ first milestone lives in the OpenSpec change
 
 - [ ] Article extraction via go-readability
 - [ ] Rendered reading with heading jumps and in-content search
-- [ ] Best-effort image display on Kitty-graphics terminals
+- [ ] Images rendered as `[img (alt text)]` placeholders
 
 ## Milestone 5 — Navigation and layout
 
 - [ ] Link selector with in-place open and back
-- [ ] Wide (dual-pane) view with `z` toggle and `--wide-view`
+- [ ] Wide (dual-pane) view with `z` toggle
 - [ ] Centralized keymaps and `i` help overlay
 
 ## Milestone 6 — Persistence and config

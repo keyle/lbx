@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
-)
 
-// UserAgent identifies the client to lobste.rs. Keep it descriptive so traffic
-// is easy to attribute and rate-limit politely.
-const UserAgent = "lbx/0.1 (+https://github.com/noben/lbx)"
+	"noben.org/lbx/version"
+)
 
 const (
 	defaultTimeout       = 15 * time.Second
@@ -63,7 +62,7 @@ func New(opts ...Option) *Client {
 	c := &Client{
 		http:  &http.Client{Timeout: defaultTimeout},
 		base:  BaseURL,
-		ua:    UserAgent,
+		ua:    version.UserAgent(),
 		ttl:   defaultFeedTTL,
 		sem:   make(chan struct{}, defaultMaxConcurrent),
 		feeds: make(map[string]*feedEntry),
@@ -156,10 +155,26 @@ func (c *Client) getJSON(ctx context.Context, path string, v any, etag string) (
 		return etag, true, nil
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", false, fmt.Errorf("lobste.rs: %s: %s", path, resp.Status)
+		return "", false, statusError(path, resp)
+	}
+	if ct := resp.Header.Get("Content-Type"); strings.Contains(ct, "html") {
+		return "", false, fmt.Errorf("lobste.rs: %s: expected JSON, got %q (the server may be challenging requests)", path, ct)
 	}
 	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
 		return "", false, fmt.Errorf("lobste.rs: decode %s: %w", path, err)
 	}
 	return resp.Header.Get("ETag"), false, nil
+}
+
+// statusError turns an unexpected HTTP status into a clear error, calling out
+// rate limiting and the challenge pages lobste.rs may serve.
+func statusError(path string, resp *http.Response) error {
+	switch resp.StatusCode {
+	case http.StatusTooManyRequests:
+		return fmt.Errorf("lobste.rs: %s: rate limited, try again later", path)
+	case http.StatusForbidden, http.StatusServiceUnavailable:
+		return fmt.Errorf("lobste.rs: %s: %s (the server may be challenging requests)", path, resp.Status)
+	default:
+		return fmt.Errorf("lobste.rs: %s: %s", path, resp.Status)
+	}
 }

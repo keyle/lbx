@@ -43,7 +43,7 @@ The client SHALL support `--categories` to select and order the categories shown
 - **THEN** those categories appear in that order
 
 ### Requirement: Behavior flags
-The client SHALL support `--wide-view` to control the dual-pane layout and `--no-history` to disable visit tracking.
+The client SHALL support `--no-history` to disable visit tracking.
 
 #### Scenario: Disable history
 - **WHEN** the user runs `lbx --no-history`

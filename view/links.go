@@ -130,7 +130,7 @@ func lobstersStoryID(raw string) (string, bool) {
 }
 
 // overlayTop replaces the first lines of base with the overlay lines.
-func overlayTop(base string, overlay []string, width int) string {
+func overlayTop(base string, overlay []string) string {
 	if len(overlay) == 0 {
 		return base
 	}
