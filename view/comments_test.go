@@ -11,7 +11,7 @@ import (
 	"noben.org/lbx/lobsters"
 )
 
-func newTestComments(t *testing.T) *commentsScreen {
+func loadTestStory(t *testing.T) lobsters.StoryWithComments {
 	t.Helper()
 	data, err := os.ReadFile("../lobsters/testdata/story.json")
 	if err != nil {
@@ -21,6 +21,12 @@ func newTestComments(t *testing.T) *commentsScreen {
 	if err := json.Unmarshal(data, &story); err != nil {
 		t.Fatalf("decode fixture: %v", err)
 	}
+	return story
+}
+
+func newTestComments(t *testing.T) *commentsScreen {
+	t.Helper()
+	story := loadTestStory(t)
 	c := newCommentsScreen(nil, story.Story, time.Time{})
 	c.tree = domain.BuildTree(story.Comments)
 	c.width, c.height = 80, 24
@@ -157,14 +163,7 @@ func indexOf(c *commentsScreen, n *domain.Node) int {
 }
 
 func TestCommentsLoadCollapsed(t *testing.T) {
-	data, err := os.ReadFile("../lobsters/testdata/story.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var story lobsters.StoryWithComments
-	if err := json.Unmarshal(data, &story); err != nil {
-		t.Fatal(err)
-	}
+	story := loadTestStory(t)
 	c := newCommentsScreen(nil, story.Story, time.Time{})
 	c.width, c.height = 80, 24
 	c.Update(storyLoadedMsg{id: story.ShortID, story: &story})
