@@ -31,7 +31,7 @@ var listKeymap = keymap.Map{
 	{Name: "halfUp", Keys: []string{"ctrl+u"}},
 	{Name: "top", Keys: []string{"g", "home"}, Help: "g / G", Desc: "top / bottom"},
 	{Name: "bottom", Keys: []string{"G", "end"}},
-	{Name: "comments", Keys: []string{"enter"}, Help: "Enter", Desc: "open comments"},
+	{Name: "comments", Keys: []string{"enter", "l"}, Help: "Enter / l", Desc: "open comments"},
 	{Name: "reader", Keys: []string{" "}, Help: "Space", Desc: "open reader mode"},
 	{Name: "openStory", Keys: []string{"o"}, Help: "o / c", Desc: "open story / comments in browser"},
 	{Name: "openComments", Keys: []string{"c"}},
@@ -41,11 +41,12 @@ var listKeymap = keymap.Map{
 	{Name: "unfavorite", Keys: []string{"x"}},
 	{Name: "toggleRead", Keys: []string{"u"}, Help: "u", Desc: "toggle read"},
 	{Name: "search", Keys: []string{"/"}, Help: "/", Desc: "search"},
-	{Name: "help", Keys: []string{"i"}, Help: "i", Desc: "help"},
+	{Name: "help", Keys: []string{"i"}, Help: "? / i", Desc: "help"},
 	{Name: "quit", Keys: []string{"q"}, Help: "q", Desc: "quit"},
 }
 
-const rowLines = 2
+// rowLines is a story row (title, meta) plus one blank separator line.
+const rowLines = 3
 
 type listScreen struct {
 	client *lobsters.Client
@@ -267,7 +268,7 @@ func (l *listScreen) clampCursor() {
 }
 
 func (l *listScreen) pageSize() int {
-	visible := l.height / rowLines
+	visible := (l.height + 1) / rowLines
 	if visible < 1 {
 		visible = 1
 	}
@@ -288,7 +289,7 @@ func (l *listScreen) View(width, height int) string {
 
 	visible := l.pageSize()
 	if l.searching {
-		visible = (l.height - 1) / rowLines
+		visible = l.height / rowLines
 		if visible < 1 {
 			visible = 1
 		}
@@ -302,7 +303,7 @@ func (l *listScreen) View(width, height int) string {
 	}
 	for i := l.offset; i < end; i++ {
 		if i > l.offset {
-			b.WriteString("\n")
+			b.WriteString("\n\n")
 		}
 		b.WriteString(l.renderRow(i, width))
 	}

@@ -21,31 +21,23 @@ import (
 
 // commentsKeymap is the comment section's keybindings.
 var commentsKeymap = keymap.Map{
-	{Name: "down", Keys: []string{"j", "down"}, Help: "j / k", Desc: "scroll down / up"},
+	{Name: "down", Keys: []string{"j", "down"}, Help: "j / k", Desc: "next / previous comment"},
 	{Name: "up", Keys: []string{"k", "up"}},
 	{Name: "halfDown", Keys: []string{"ctrl+d"}, Help: "Ctrl-D/Ctrl-U", Desc: "half-page down / up"},
 	{Name: "halfUp", Keys: []string{"ctrl+u"}},
 	{Name: "top", Keys: []string{"g", "home"}, Help: "g / G", Desc: "top / bottom"},
 	{Name: "bottom", Keys: []string{"G", "end"}},
-	{Name: "nextRoot", Keys: []string{"n"}, Help: "n / N", Desc: "next / previous top-level comment"},
-	{Name: "prevRoot", Keys: []string{"N"}},
-	{Name: "collapse", Keys: []string{"h"}, Help: "h / l", Desc: "collapse / expand thread"},
-	{Name: "expand", Keys: []string{"l"}},
-	{Name: "toggleAll", Keys: []string{"enter"}, Help: "Enter", Desc: "toggle all threads"},
-	{Name: "navigate", Keys: []string{"a"}, Help: "a", Desc: "navigate comments"},
+	{Name: "expand", Keys: []string{"l"}, Help: "l / h", Desc: "expand / collapse comment"},
+	{Name: "collapse", Keys: []string{"h"}},
+	{Name: "expandThread", Keys: []string{"L"}, Help: "L", Desc: "expand whole sub-thread"},
+	{Name: "expandAll", Keys: []string{"a"}, Help: "a / c", Desc: "expand / collapse all"},
+	{Name: "collapseAll", Keys: []string{"c"}},
 	{Name: "links", Keys: []string{"tab"}, Help: "Tab", Desc: "select link"},
-	{Name: "esc", Keys: []string{"esc"}, Help: "Esc", Desc: "leave navigate mode / back"},
-	{Name: "back", Keys: []string{"q"}, Help: "q", Desc: "back"},
+	{Name: "help", Help: "? / i", Desc: "this help"},
+	{Name: "back", Keys: []string{"q", "esc"}, Help: "q / Esc", Desc: "back"},
 }
 
 const maxIndent = 10
-
-type commentMode int
-
-const (
-	modeRead commentMode = iota
-	modeNavigate
-)
 
 type commentsScreen struct {
 	client *lobsters.Client
@@ -58,10 +50,10 @@ type commentsScreen struct {
 	err     error
 
 	collapsed map[string]bool
-	mode      commentMode
 
 	scroll int
-	sel    int
+	sel    int    // index into visible
+	selID  string // short id of the highlighted comment
 
 	width, height int
 
@@ -136,45 +128,32 @@ func (c *commentsScreen) handleKey(msg tea.KeyMsg) (Screen, tea.Cmd) {
 	switch commentsKeymap.Action(msg) {
 	case "back":
 		return c, func() tea.Msg { return popMsg{} }
-	case "esc":
-		if c.mode == modeNavigate {
-			c.mode = modeRead
-		} else {
-			return c, func() tea.Msg { return popMsg{} }
-		}
-	case "navigate":
-		c.mode = modeNavigate
-		c.sel = c.currentVisibleIndex()
 	case "down":
-		if c.mode == modeNavigate {
-			c.selectMove(1)
-		} else {
-			c.scrollBy(1)
-		}
+		c.selectMove(1)
 	case "up":
-		if c.mode == modeNavigate {
-			c.selectMove(-1)
-		} else {
-			c.scrollBy(-1)
-		}
+		c.selectMove(-1)
 	case "halfDown":
 		c.scrollBy(c.pageSize() / 2)
+		c.syncSelToScroll(1)
 	case "halfUp":
 		c.scrollBy(-c.pageSize() / 2)
+		c.syncSelToScroll(-1)
 	case "top":
+		c.selectIndex(0)
 		c.scroll = 0
 	case "bottom":
+		c.selectIndex(len(c.visible) - 1)
 		c.scroll = c.maxScroll()
 	case "collapse":
 		c.setCollapsed(c.currentNode(), true)
 	case "expand":
 		c.setCollapsed(c.currentNode(), false)
-	case "toggleAll":
-		c.toggleAll()
-	case "nextRoot":
-		c.jumpRoot(1)
-	case "prevRoot":
-		c.jumpRoot(-1)
+	case "expandThread":
+		c.expandThread(c.currentNode())
+	case "expandAll":
+		c.expandAll()
+	case "collapseAll":
+		c.collapseAll()
 	case "links":
 		c.picker.toggle(render.Links(c.rawHTML()))
 	}
@@ -212,18 +191,18 @@ func (c *commentsScreen) rebuild() {
 		indent := strings.Repeat("  ", min(n.Comment.Depth, maxIndent))
 		c.nodeStart[id] = len(c.lines)
 
-		header := indent + style.Submitter.Render("@"+n.Comment.CommentingUser) +
-			" " + style.Meta.Render(timeago.Since(n.Comment.CreatedAt)) +
-			" " + style.Score.Render(fmt.Sprintf("%d", n.Comment.Score))
-		if !c.since.IsZero() && n.Comment.CreatedAt.After(c.since) {
-			header += " " + style.Comments.Render("new")
-		}
+		header := indent + style.Submitter.Render(n.Comment.CommentingUser)
 		if n.HasChildren() {
 			marker := "[-]"
 			if c.collapsed[id] {
 				marker = "[+]"
 			}
-			header += " " + style.Meta.Render(marker)
+			header += " " + style.Submitter.Render(marker)
+		}
+		header += " " + style.Score.Render(fmt.Sprintf("%d pts", n.Comment.Score)) +
+			" " + style.Meta.Render(timeago.Since(n.Comment.CreatedAt))
+		if !c.since.IsZero() && n.Comment.CreatedAt.After(c.since) {
+			header += " " + style.Comments.Render("new")
 		}
 		c.appendLine(header, id, n.Comment.ParentComment == nil)
 
@@ -234,9 +213,39 @@ func (c *commentsScreen) rebuild() {
 		c.appendLine("", id, false)
 	}
 
+	c.resolveSel()
 	c.scroll = clamp(c.scroll, 0, c.maxScroll())
-	if c.sel >= len(c.visible) {
-		c.sel = max(0, len(c.visible)-1)
+}
+
+// resolveSel keeps the highlight on selID, or on its nearest visible ancestor
+// when it was hidden by a collapse, defaulting to the first comment.
+func (c *commentsScreen) resolveSel() {
+	c.sel = 0
+	if len(c.visible) == 0 {
+		c.selID = ""
+		return
+	}
+	id := c.selID
+	for id != "" {
+		if _, ok := c.nodeStart[id]; ok {
+			break
+		}
+		n := c.tree.Find(id)
+		if n == nil || n.Comment.ParentComment == nil {
+			id = ""
+			break
+		}
+		id = *n.Comment.ParentComment
+	}
+	if id == "" {
+		id = c.visible[0].Comment.ShortID
+	}
+	c.selID = id
+	for i, n := range c.visible {
+		if n.Comment.ShortID == id {
+			c.sel = i
+			break
+		}
 	}
 }
 
@@ -286,24 +295,7 @@ func (c *commentsScreen) currentNode() *domain.Node {
 	if len(c.visible) == 0 {
 		return nil
 	}
-	if c.mode == modeNavigate {
-		return c.visible[clamp(c.sel, 0, len(c.visible)-1)]
-	}
-	idx := c.currentVisibleIndex()
-	return c.visible[idx]
-}
-
-func (c *commentsScreen) currentVisibleIndex() int {
-	if len(c.visible) == 0 {
-		return 0
-	}
-	best := 0
-	for i, n := range c.visible {
-		if c.nodeStart[n.Comment.ShortID] <= c.scroll {
-			best = i
-		}
-	}
-	return best
+	return c.visible[clamp(c.sel, 0, len(c.visible)-1)]
 }
 
 func (c *commentsScreen) setCollapsed(n *domain.Node, collapsed bool) {
@@ -320,49 +312,95 @@ func (c *commentsScreen) setCollapsed(n *domain.Node, collapsed bool) {
 	c.ensureSelectionVisible()
 }
 
-func (c *commentsScreen) toggleAll() {
-	anyExpanded := false
-	for _, n := range c.visible {
-		if n.HasChildren() && !c.collapsed[n.Comment.ShortID] {
-			anyExpanded = true
-			break
+func (c *commentsScreen) expandThread(n *domain.Node) {
+	if n == nil {
+		return
+	}
+	var walk func(n *domain.Node)
+	walk = func(n *domain.Node) {
+		delete(c.collapsed, n.Comment.ShortID)
+		for _, child := range n.Children {
+			walk(child)
 		}
 	}
+	walk(n)
+	c.rebuild()
+	c.ensureSelectionVisible()
+}
+
+func (c *commentsScreen) expandAll() {
+	c.collapsed = map[string]bool{}
+	c.rebuild()
+	c.ensureSelectionVisible()
+}
+
+func (c *commentsScreen) collapseAll() {
 	if c.tree == nil {
 		return
 	}
 	c.collapsed = map[string]bool{}
-	if anyExpanded {
-		var walk func(n *domain.Node)
-		walk = func(n *domain.Node) {
-			if n.HasChildren() {
-				c.collapsed[n.Comment.ShortID] = true
-			}
-			for _, child := range n.Children {
-				walk(child)
-			}
+	var walk func(n *domain.Node)
+	walk = func(n *domain.Node) {
+		if n.HasChildren() {
+			c.collapsed[n.Comment.ShortID] = true
 		}
-		for _, root := range c.tree.Roots {
-			walk(root)
+		for _, child := range n.Children {
+			walk(child)
 		}
+	}
+	for _, root := range c.tree.Roots {
+		walk(root)
 	}
 	c.rebuild()
-}
-
-func (c *commentsScreen) selectMove(delta int) {
-	if len(c.visible) == 0 {
-		return
-	}
-	c.sel = clamp(c.sel+delta, 0, len(c.visible)-1)
 	c.ensureSelectionVisible()
 }
 
-func (c *commentsScreen) ensureSelectionVisible() {
-	if c.mode != modeNavigate || len(c.visible) == 0 {
+func (c *commentsScreen) selectIndex(i int) {
+	if len(c.visible) == 0 {
 		return
 	}
-	n := c.visible[c.sel]
-	start := c.nodeStart[n.Comment.ShortID]
+	c.sel = clamp(i, 0, len(c.visible)-1)
+	c.selID = c.visible[c.sel].Comment.ShortID
+}
+
+func (c *commentsScreen) selectMove(delta int) {
+	c.selectIndex(c.sel + delta)
+	c.ensureSelectionVisible()
+}
+
+// syncSelToScroll moves the highlight onto a comment that is on screen after a
+// page scroll, if it scrolled out of view.
+func (c *commentsScreen) syncSelToScroll(dir int) {
+	if len(c.visible) == 0 {
+		return
+	}
+	start := c.nodeStart[c.selID]
+	if start >= c.scroll && start < c.scroll+c.pageSize() {
+		return
+	}
+	if dir > 0 {
+		for i, n := range c.visible {
+			if c.nodeStart[n.Comment.ShortID] >= c.scroll {
+				c.selectIndex(i)
+				return
+			}
+		}
+		c.selectIndex(len(c.visible) - 1)
+		return
+	}
+	for i := len(c.visible) - 1; i >= 0; i-- {
+		if c.nodeStart[c.visible[i].Comment.ShortID] < c.scroll+c.pageSize() {
+			c.selectIndex(i)
+			return
+		}
+	}
+}
+
+func (c *commentsScreen) ensureSelectionVisible() {
+	if len(c.visible) == 0 {
+		return
+	}
+	start := c.nodeStart[c.selID]
 	if start < c.scroll {
 		c.scroll = start
 	}
@@ -370,31 +408,6 @@ func (c *commentsScreen) ensureSelectionVisible() {
 		c.scroll = start - c.pageSize() + 1
 	}
 	c.scroll = clamp(c.scroll, 0, c.maxScroll())
-}
-
-func (c *commentsScreen) jumpRoot(delta int) {
-	if len(c.visible) == 0 {
-		return
-	}
-	cur := c.currentVisibleIndex()
-	i := cur
-	if delta > 0 {
-		i++
-	} else {
-		i--
-	}
-	for ; i >= 0 && i < len(c.visible); i += delta {
-		if c.visible[i].Comment.ParentComment == nil {
-			c.scroll = c.nodeStart[c.visible[i].Comment.ShortID]
-			if c.mode == modeNavigate {
-				c.sel = i
-			}
-			return
-		}
-	}
-	if delta < 0 {
-		c.scroll = 0
-	}
 }
 
 func (c *commentsScreen) scrollBy(delta int) {
@@ -443,8 +456,8 @@ func (c *commentsScreen) View(width, height int) string {
 			b.WriteString("\n")
 		}
 		line := ansi.Truncate(c.lines[i], width, "…")
-		if c.mode == modeNavigate && c.lineID[i] == c.visible[c.sel].Comment.ShortID && c.lineID[i] != "" {
-			line = style.Selection.Reverse(true).Render(line)
+		if c.selID != "" && i == c.nodeStart[c.selID] {
+			line = style.Selection.Reverse(true).Render(ansi.Strip(line))
 		}
 		b.WriteString(line)
 	}

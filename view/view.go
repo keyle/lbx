@@ -19,7 +19,7 @@ import (
 
 // globalKeymap holds keys the root handles before dispatching to a screen.
 var globalKeymap = keymap.Map{
-	{Name: "help", Keys: []string{"i"}},
+	{Name: "help", Keys: []string{"?", "i"}},
 	{Name: "wide", Keys: []string{"z"}},
 }
 
@@ -195,7 +195,7 @@ func (m Model) View() string {
 		if t := top.Title(); t != "" {
 			keysTitle += " — " + t
 		}
-		box := help.Render(keysTitle, top.Help())
+		box := help.Render(keysTitle, append(top.Help(), help.Binding{Keys: "z", Desc: "toggle wide view"}))
 		return head + "\n\n" + lipgloss.Place(m.width, bodyHeight, lipgloss.Center, lipgloss.Center, box)
 	}
 

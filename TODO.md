@@ -35,7 +35,9 @@ first milestone lives in the OpenSpec change
 
 - [ ] Shared HTML→ANSI renderer
 - [ ] Threaded comment rendering
-- [ ] Read/navigate modes, collapse/expand, `n`/`N` top-level jumps
+- [x] Always-highlighted comment (`j`/`k`), `l`/`h` expand/collapse, `L` expand sub-thread, `a`/`c` expand/collapse all
+- [x] Header: `name [+] N pts age`
+- [x] Blank line between stories; `?`/`i` help
 
 ## Milestone 4 — Reader mode
 

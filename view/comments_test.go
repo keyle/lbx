@@ -45,8 +45,8 @@ func TestCommentsRebuild(t *testing.T) {
 	if len(c.lines) == 0 {
 		t.Fatal("no rendered lines")
 	}
-	if !strings.Contains(c.lines[0], "@") {
-		t.Errorf("first line missing author: %q", c.lines[0])
+	if !strings.Contains(c.lines[0], "pts") {
+		t.Errorf("first line missing score: %q", c.lines[0])
 	}
 }
 
@@ -70,69 +70,52 @@ func TestCommentsCollapse(t *testing.T) {
 	}
 }
 
-func TestCommentsToggleAll(t *testing.T) {
+func TestCommentsExpandCollapseAll(t *testing.T) {
 	c := newTestComments(t)
-	c.toggleAll()
+	c.Update(key("c"))
 	for _, n := range c.visible {
 		if n.HasChildren() && !c.collapsed[n.Comment.ShortID] {
-			t.Errorf("toggleAll did not collapse %q", n.Comment.ShortID)
+			t.Errorf("c did not collapse %q", n.Comment.ShortID)
 		}
 	}
-	c.toggleAll()
-	for _, n := range c.visible {
-		if c.collapsed[n.Comment.ShortID] {
-			t.Errorf("second toggleAll did not expand %q", n.Comment.ShortID)
+	c.Update(key("a"))
+	if len(c.collapsed) != 0 {
+		t.Errorf("a left %d collapsed", len(c.collapsed))
+	}
+}
+
+func TestCommentsExpandThread(t *testing.T) {
+	c := newTestComments(t)
+	c.Update(key("c"))
+	root := firstRootWithChildren(c)
+	c.selectIndex(indexOf(c, root))
+	c.Update(key("l"))
+	if c.collapsed[root.Comment.ShortID] {
+		t.Fatal("l did not expand")
+	}
+	c.Update(key("L"))
+	for _, ch := range root.Children {
+		if c.collapsed[ch.Comment.ShortID] {
+			t.Errorf("L left %q collapsed", ch.Comment.ShortID)
 		}
 	}
 }
 
-func TestCommentsNavigateMode(t *testing.T) {
+func TestCommentsSelectMove(t *testing.T) {
 	c := newTestComments(t)
-	c.Update(key("a"))
-	if c.mode != modeNavigate {
-		t.Fatal("a did not enter navigate mode")
-	}
 	c.Update(key("j"))
-	if c.sel != 1 {
-		t.Fatalf("sel = %d, want 1", c.sel)
+	if c.sel != 1 || c.selID != c.visible[1].Comment.ShortID {
+		t.Fatalf("sel = %d, id %q", c.sel, c.selID)
 	}
-
-	c.sel = 0
-	root := c.visible[0]
-	if !root.HasChildren() {
-		root = firstRootWithChildren(c)
-		c.sel = indexOf(c, root)
+	c.Update(key("k"))
+	if c.sel != 0 {
+		t.Fatalf("sel = %d, want 0", c.sel)
 	}
+	root := firstRootWithChildren(c)
+	c.selectIndex(indexOf(c, root))
 	c.Update(key("h"))
 	if !c.collapsed[root.Comment.ShortID] {
-		t.Errorf("h did not collapse selected %q", root.Comment.ShortID)
-	}
-
-	c.Update(key("esc"))
-	if c.mode != modeRead {
-		t.Errorf("esc did not return to read mode")
-	}
-}
-
-func TestCommentsJumpRoot(t *testing.T) {
-	c := newTestComments(t)
-	roots := make([]*domain.Node, 0, 2)
-	for _, n := range c.visible {
-		if n.Comment.ParentComment == nil {
-			roots = append(roots, n)
-		}
-	}
-	if len(roots) < 2 {
-		t.Skip("fixture has fewer than two top-level comments")
-	}
-	c.scroll = 0
-	c.Update(key("n"))
-	if want := c.nodeStart[roots[1].Comment.ShortID]; c.scroll != want {
-		t.Errorf("n scroll = %d, want %d", c.scroll, want)
-	}
-	c.Update(key("N"))
-	if c.scroll != c.nodeStart[roots[0].Comment.ShortID] {
-		t.Errorf("N scroll = %d, want %d", c.scroll, c.nodeStart[roots[0].Comment.ShortID])
+		t.Errorf("h did not collapse %q", root.Comment.ShortID)
 	}
 }
 
@@ -143,7 +126,7 @@ func TestCommentsView(t *testing.T) {
 	if out == "" {
 		t.Fatal("empty view")
 	}
-	if !strings.Contains(out, "@") {
+	if !strings.Contains(out, "pts") {
 		t.Errorf("view missing authors:\n%s", out)
 	}
 }
