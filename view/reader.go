@@ -254,10 +254,12 @@ func (r *readerScreen) pageSize() int {
 }
 
 func (r *readerScreen) maxScroll() int {
-	if m := len(r.lines) - r.pageSize(); m > 0 {
-		return m
+	if len(r.lines) <= r.pageSize() {
+		return 0
 	}
-	return 0
+	// Permit scrolling past the end so the last line can rise to the middle
+	// of the screen, vim-style.
+	return len(r.lines) - r.pageSize() + r.pageSize()/2
 }
 
 func (r *readerScreen) rebuild() {
